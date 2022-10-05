@@ -1,5 +1,6 @@
 import itertools
 import os
+import random
 from math import sqrt
 from typing import Tuple
 
@@ -21,21 +22,21 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 
-
 def find_center_of_gravity(points):
-    if len(points) == 1:
-        return points[0]
-
-    if len(points) == 2:
-        return (int(points[0][0]) + int(points[1][0])) / 2, (int(points[0][1]) + int(points[1][1])) / 2
-
-    i = 0
-    new_points = []
+    if len(points) == 1: return points[0][0], points[0][1]
+    i = 2
+    x = (int(points[0][0]) + int(points[1][0])) / 2
+    y = (int(points[0][1]) + int(points[1][1])) / 2
     while i < len(points):
-        new_points.append(find_center_of_gravity(points[i:i + 2]))
+        if i + 1 == len(points):
+            x = (x + points[i][0]) / 2
+            y = (y + points[i][1]) / 2
+            break
+        x = (x + (points[i][0] + points[i + 1][0]) / 2) / 2
+        y = (y + (points[i][1] + points[i + 1][1]) / 2) / 2
         i += 2
 
-    return find_center_of_gravity(new_points)
+    return x, y
 
 
 def distance_between_points(points):
@@ -50,7 +51,7 @@ def find_r_and_o(points) -> Tuple[int, Tuple[int, int]]:
         distance = distance_between_points([(x_center, y_center), point])
         r = max(distance, r)
 
-    return int(r + 2), (int(x_center), int(y_center))  # к радиусу добавляю 2, чтобы точка не лежала на окружности
+    return r, (int(x_center), int(y_center))  # к радиусу добавляю 2, чтобы точка не лежала на окружности
 
 
 def find_J_C(clusters_centers, clusters_points):
@@ -63,33 +64,8 @@ def find_J_C(clusters_centers, clusters_points):
     return sum
 
 
-def generate_random_points():
-    import random
-
-    radius = 5
-    rangeX = (10, 110)
-    rangeY = (10, 110)
-    qty = 20  # or however many points you want
-
-    # Generate a set of all points within 200 of the origin, to be used as offsets later
-    # There's probably a more efficient way to do this.
-    deltas = set()
-    for x in range(-radius, radius + 1):
-        for y in range(-radius, radius + 1):
-            if x * x + y * y <= radius * radius:
-                deltas.add((x, y))
-
-    randPoints = []
-    excluded = set()
-    i = 0
-    while i < qty:
-        x = random.randrange(*rangeX)
-        y = random.randrange(*rangeY)
-        if (x, y) in excluded: continue
-        randPoints.append((x, y))
-        i += 1
-        excluded.update((x + dx, y + dy) for (dx, dy) in deltas)
-    return randPoints
+def generate_point(mean_x, mean_y, deviation_x, deviation_y):
+    return random.gauss(mean_x, deviation_x), random.gauss(mean_y, deviation_y)
 
 
 def plot_helper():
@@ -97,8 +73,8 @@ def plot_helper():
     fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(aspect="equal"))
     ax.set_facecolor(bg_color)
 
-    plt.xlim(0, 140)
-    plt.ylim(0, 140)
+    # plt.xlim(-100, 100)
+    # plt.ylim(-100, 100)
 
     ax.set_axisbelow(True)
     ax.yaxis.grid(color='gray', linestyle='dashed', alpha=0.7)
@@ -111,9 +87,18 @@ def plot_helper():
 
 def main():
     # генерирует точки в прямоугольнике 0,0 1000,1000
+    _cluster_centers = [generate_point(100,
+                                       100,
+                                       50,
+                                       50)
+                        for i in range(4)]
     n = 20
-    points = generate_random_points()
-
+    points = [generate_point(center_x,
+                             center_y,
+                             5,
+                             5)
+              for center_x, center_y in _cluster_centers
+              for i in range(20)]
     k = 1
     J_C_array = []
     D_K = 100000000000
@@ -162,17 +147,23 @@ def main():
                         distance_between_point_and_cluster_center = distance_between_points([point, cluster_center])
                         points_in_cluster[i].append(point)
 
+            # ищем пустой кластер и сдвигаем его центр, пока в него не войдет хотя бы одна точка.
+
+
+
             # рисуем точки - с цветами по кластеру
             image_index += 1
             filename = f'images/frame_{image_index}.png'
             filenames.append(filename)
             for i, cluster_points in enumerate(points_in_cluster):
-                plt.scatter(*zip(*cluster_points), c=POINTS_COLOR[i])
+                if cluster_points:
+                    plt.scatter(*zip(*cluster_points), c=POINTS_COLOR[i])
 
             # высчитываем для каждого кластера - новый центр тяжести
             new_cluster_centers = []
             for i, cluster_center in enumerate(clusters_centers):
-                new_cluster_centers.append(find_center_of_gravity(points_in_cluster[i]))
+                if points_in_cluster[i]:
+                    new_cluster_centers.append(find_center_of_gravity(points_in_cluster[i]))
 
             flag_to_exit = True
             for i in range(len(new_cluster_centers)):
@@ -185,7 +176,7 @@ def main():
             else:
                 clusters_centers = new_cluster_centers
 
-        image_end= image_index
+        image_end = image_index
 
         J_C_array.append(find_J_C(clusters_centers, points_in_cluster))
 
@@ -207,8 +198,8 @@ def main():
     for filename in filenames:
         images.append(imageio.imread(filename))
     imageio.mimsave('result.gif', images)
-    for filename in set(filenames):
-        os.remove(filename)
+    # for filename in set(filenames):
+    #     os.remove(filename)
 
 
 if __name__ == '__main__':
