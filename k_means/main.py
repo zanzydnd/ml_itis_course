@@ -23,20 +23,21 @@ import matplotlib.pyplot as plt
 
 
 def find_center_of_gravity(points):
-    if len(points) == 1: return points[0][0], points[0][1]
-    i = 2
-    x = (int(points[0][0]) + int(points[1][0])) / 2
-    y = (int(points[0][1]) + int(points[1][1])) / 2
-    while i < len(points):
-        if i + 1 == len(points):
-            x = (x + points[i][0]) / 2
-            y = (y + points[i][1]) / 2
-            break
-        x = (x + (points[i][0] + points[i + 1][0]) / 2) / 2
-        y = (y + (points[i][1] + points[i + 1][1]) / 2) / 2
-        i += 2
-
-    return x, y
+    # if len(points) == 1: return points[0][0], points[0][1]
+    # i = 2
+    # x = (int(points[0][0]) + int(points[1][0])) / 2
+    # y = (int(points[0][1]) + int(points[1][1])) / 2
+    # while i < len(points):
+    #     if i + 1 == len(points):
+    #         x = (x + points[i][0]) / 2
+    #         y = (y + points[i][1]) / 2
+    #         break
+    #     x = (x + (points[i][0] + points[i + 1][0]) / 2) / 2
+    #     y = (y + (points[i][1] + points[i + 1][1]) / 2) / 2
+    #     i += 2
+    #
+    # return x, y
+    return sum(point[0] for point in points) / len(points), sum(point[1] for point in points) / len(points)
 
 
 def distance_between_points(points):
@@ -86,6 +87,7 @@ def plot_helper():
 
 
 def main():
+    best = 0
     # генерирует точки в прямоугольнике 0,0 1000,1000
     _cluster_centers = [generate_point(100,
                                        100,
@@ -180,20 +182,18 @@ def main():
 
         J_C_array.append(find_J_C(clusters_centers, points_in_cluster))
 
-        if 2 < k < n:
-            new_D_K = abs(J_C_array[k - 1 - 1] - J_C_array[k - 1]) / abs(
-                J_C_array[k - 1 - 1 - 1] - J_C_array[k - 1 - 1])
-            if D_K < new_D_K:
-                # filenames = set(filenames)
-                # for i in range(image_strt,image_end):
-                #     filenames.remove(f"images/frame_{i}.png")
-                #     os.remove(f"images/frame_{i}.png")
-                break
-            D_K = new_D_K
-
+        if 2 < k < n - 1:
+            try:
+                new_D_K = abs(J_C_array[k - 1 - 1] - J_C_array[k - 1]) / abs(
+                    J_C_array[k - 1 - 1 - 1] - J_C_array[k - 1 - 1])
+            except:
+                new_D_K = abs(J_C_array[k - 1 - 1] - J_C_array[k - 1])
+            if new_D_K < D_K:
+                D_K = new_D_K
+                best = k -1
         k += 1
-    actual_k = k - 1
 
+    print(best - 2)
     images = []
     for filename in filenames:
         images.append(imageio.imread(filename))
