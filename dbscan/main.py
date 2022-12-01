@@ -70,7 +70,7 @@ def dbscan_naive(P, eps, m, distance):
 #     generate_points(mean_x=100, mean_y=100, deviation_x=50, deviation_y=50)
 #     for i in range(100)
 # ]
-eps = 200  # размер эпсилон-окрестности
+eps = 100  # размер эпсилон-окрестности
 m = 3  # минимальное число объектов для полной эпсилон-окрестности
 
 # plt.scatter(X, Y, c=c)
